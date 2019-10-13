@@ -1,16 +1,20 @@
 package com.example.demo.service;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.exception.FileNotFoundException;
 import com.example.demo.exception.FileStorageException;
 import com.example.demo.property.FileStorageProperties;
 
@@ -26,7 +30,7 @@ public class FileStorageService {
 
         try {
             Files.createDirectories(this.fileStorageLocation);
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new FileStorageException("Could not create the directory => " + this.fileStorageLocation, e);
         }
     }
@@ -47,8 +51,22 @@ public class FileStorageService {
             Files.copy(file.getInputStream(), tagetLocation, StandardCopyOption.REPLACE_EXISTING); // fileのコピー(fileが存在していたら上書きをするようOptionで設定)
 
             return fileName;
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new FileStorageException("Could not store file" + fileName);
+        }
+    }
+
+    // 引数で渡したfileNameを元にResourceオブジェクトを返す
+    public Resource loadFileAsResouce(String fileName) {
+        Path filePath = this.fileStorageLocation.resolve(fileName); // fileの絶対パスを取得
+        try {
+            Resource resource = new UrlResource(filePath.toUri()); // 引数のURIを元にURIオブジェクトを格納
+            if (!resource.exists()) {
+                throw new FileNotFoundException("File not found => " + fileName);
+            }
+            return resource;
+        } catch (MalformedURLException e) {
+            throw new FileNotFoundException("File not found => " + fileName);
         }
     }
 }
